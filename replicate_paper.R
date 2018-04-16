@@ -1,3 +1,5 @@
+rm(list = ls())
+
 
 ### Make sure to set your working directory to the one containing this file and "functions_paper.R"
 source('functions_paper.R')
@@ -66,7 +68,7 @@ beta_DPower <- c(2, 5, 10)
 p_Wang <- c(0.8, 0.9, 0.95)
 
 ### initialize variables
-maxvalues <- matrix(NA, nrow = 9, ncol = 3)
+maxvalues <- matrix(NA, nrow = 9, ncol = 4)
 
 eta12 <- eta13 <- eta14 <-
   matrix(NA, nrow = 9, ncol = 2)
@@ -88,6 +90,10 @@ for (ii in 1:length(alpha_Power)) {
   moms12[ii, 2] <- distribution2moment(fDist, k)
   maxvalues[ii, 1] <- evalDistortion(function(x) gPower(x, alpha_Power[ii]), fDist)
   
+  maxvalues[ii, 4] <- get_worst_case_unbounded(mu = moments[1], s = sqrt(moments[2] - moments[1]^2),
+                                               Drho = function(x) DgPower(x, alpha_Power[ii]),
+                                               DrhoInv = function(x) DgPowerInv(x, alpha_Power[ii]), eps = 1e-6, tol = 1e-7)$Hg
+  
   # Dual-power distortion
   eta12[length(alpha_Power) + ii,] <- moments2eta(moments[c(1, k)], function(x) DgDPowerInv(x, beta_DPower[ii]), k, etastart = c(-8.03e-01, 3.21), tol = 2e-07)
   fDist <- function(x) F_eta(x, eta12[length(alpha_Power) + ii,], function(x) DgDPowerInv(x, beta_DPower[ii]), k)
@@ -95,12 +101,21 @@ for (ii in 1:length(alpha_Power)) {
   moms12[length(alpha_Power) + ii, 2] <- distribution2moment(fDist, k, tol = 1e-07)
   maxvalues[length(alpha_Power) + ii, 1] <- evalDistortion(function(x) gDPower(x, beta_DPower[ii]), fDist, tol = 1e-07)
   
+  maxvalues[length(alpha_Power) + ii, 4] <- get_worst_case_unbounded(mu = moments[1], s = sqrt(moments[2] - moments[1]^2), 
+                                                                     Drho = function(x) DgDPower(x, beta_DPower[ii]), 
+                                                                     DrhoInv = function(x) DgDPowerInv(x, beta_DPower[ii]))$Hg
+  
   # Wang distortion
   eta12[length(c(alpha_Power, beta_DPower)) + ii,] <- moments2eta(moments[c(1, k)], function(x) DgWangInv(x, p_Wang[ii]), k)
   fDist <- function(x) F_eta(x, eta12[length(c(alpha_Power, beta_DPower)) + ii,], function(x) DgWangInv(x, p_Wang[ii]), k)
   moms12[length(c(alpha_Power, beta_DPower)) + ii, 1] <- distribution2moment(fDist, 1)
   moms12[length(c(alpha_Power, beta_DPower)) + ii, 2] <- distribution2moment(fDist, k)
   maxvalues[length(c(alpha_Power, beta_DPower)) + ii, 1] <- evalDistortion(function(x) gWang(x, p_Wang[ii]), fDist)
+  
+  maxvalues[length(c(alpha_Power, beta_DPower)) + ii, 4] <- 
+    get_worst_case_unbounded(mu = moments[1], s = sqrt(moments[2] - moments[1]^2), 
+                             Drho = function(x) DgWang(x, p_Wang[ii]), 
+                             DrhoInv = function(x) DgWangInv(x, p_Wang[ii]), tol = 1e-7)$Hg
 }
 print(moms12) # as check
 
@@ -280,3 +295,4 @@ abline(v = 0, lwd = 2, lty = 4)
 legend(-4, 1.9, c(expression(E[1]), expression(E[2]), expression(E[3]), expression(E[4])),
        lwd = c(10, 10, 10, 10), col = c("grey30", "grey80", "grey55", "grey10"),
        cex = 1.7)
+

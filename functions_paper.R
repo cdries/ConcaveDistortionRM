@@ -312,3 +312,46 @@ distribution2moment <- function(fDistribution, m = 1, ...) {
   
   return (mom)
 }
+
+
+###############################################################
+### General solution: unbounded support - mean and variance ###
+###############################################################
+
+get_worst_case_unbounded <- function(mu, s, Drho, DrhoInv, ...) {
+  
+  if (hasArg(tol)) tol <- list(...)$tol else tol = 1e-12
+  if (hasArg(eps)) eps <- list(...)$eps else eps = 0
+
+  # integrate squared derivative of distortion function
+  fn <- function(x) Drho(1 - x)^2
+  int_g <- integrate(f = fn, lower = 0, upper = 1 - eps, subdivisions = 1000L,
+                     rel.tol = tol, abs.tol = tol)$value
+  
+  # compute constants
+  eta2 <- sqrt(int_g - 1) / s
+  eta1 <- 1 - eta2 * mu
+  
+  # worst case distortion
+  w_g <- sqrt(int_g - 1)
+  Hg <- mu + w_g * s
+  
+  # worst case distribution function
+  Fstar <- function(x) {
+    
+    y <- 1 - DrhoInv(eta1 + eta2 * x)
+    ind_min_diff <- which.min(diff(y))
+    if (y[ind_min_diff] > 0.99) y[1:ind_min_diff] <- 0
+    
+    y[y > 1] <- 1
+    y[y < 0] <- 0
+    
+    return (y)
+  }
+  
+  return (list("Hg" = Hg, "Fstar" = Fstar))
+}
+
+
+
+
